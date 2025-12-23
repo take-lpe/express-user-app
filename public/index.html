@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ユーザー管理アプリ</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+        input { padding: 8px; margin-right: 5px; }
+        button { padding: 8px 15px; cursor: pointer; }
+        li { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+        .btn-group button { margin-left: 5px; font-size: 0.8em; }
+        .delete-btn { background: #ffcccc; border: none; color: #cc0000; }
+    </style>
+</head>
+<body>
+    <h1>社内ユーザー管理システム</h1>
+
+    <div class="form-group">
+        <h3>新規ユーザー追加</h3>
+        <input type="text" id="name" placeholder="名前（例：山田）">
+        <input type="text" id="role" placeholder="役職（例：Designer）">
+        <button onclick="createUser()">追加する</button>
+    </div>
+
+    <h3>ユーザー一覧</h3>
+    <ul id="user-list">
+        <li>読み込み中……</li>
+    </ul>
+
+    <script>
+    const API_URL = '/api/users';
+
+    window.onload = function() {
+        fetchUsers()
+    }
+
+    async function fetchUsers() {
+        const res = await fetch(API_URL);
+        const users = await res.json();
+
+        const list = document.getElementById('user-list');
+        list.innerHTML = '';
+
+        users.forEach(user => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span>ID:${user.id} <strong>${user.name}</strong> (${user.role})</span>
+                <div class="btn-group">
+                    <button onclick="updateUser(${user.id}, '${user.name}', '${user.role}')">編集</button>
+                    <button class="delete-btn" onclick="deleteUser(${user.id})">削除</button>
+                </div>
+            `
+            list.appendChild(li);
+        });
+    }
+
+    async function createUser() {
+        const name = document.getElementById('name').value;
+        const role = document.getElementById('role').value;
+
+        if(!name || !role) return alert("名前と役職を入力してください");
+
+        await fetch(API_URL, {
+            method: "POST",
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ name, role })
+        });
+
+        document.getElementById('name').value = '';
+        document.getElementById('role').value = '';
+        fetchUsers();
+    }
+
+    async function deleteUser(id) {
+        if(!confirm("本当に削除しますか?")) return;
+
+        await fetch (`${API_URL}/${id}`, {
+            method: 'DELETE'
+        });
+
+        fetchUsers();
+    }
+
+    async function updateUser(id, oldName, oldRole) {
+        const newName = prompt("新しい名前を入力：", oldName);
+        if(newName === null) return;
+        const newRole = prompt("新しい役職を入力：", oldRole);
+        if(newRole === null) return;
+
+        await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-type': 'application/json' },
+            body: JSON.stringify({ name: newName, role: newRole })
+        });
+        fetchUsers();
+    }
+
+    </script>
+</body>
+</html>
